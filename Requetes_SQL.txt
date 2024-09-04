@@ -1,0 +1,248 @@
+-- Lister tous les livres avec leurs titres et les noms des auteurs.
+SELECT Books.Title, Authors.FirstName, Authors.LastName 
+FROM Books 
+JOIN Authors ON Authors.AuthorID == Books.AuthorID ;
+
+-- Trouver tous les livres empruntés par un membre spécifique, par exemple 'Alice Smith'.
+SELECT Books.Title, Borrowings.BorrowDate, Borrowings.ReturnDate FROM Borrowings 
+JOIN Members on Borrowings.MemberID == Members.MemberID 
+Join Books On Books.BookID == Borrowings.BookID 
+WHERE Members.FirstName = 'Alice' and Members.LastName = 'Smith';
+
+-- Afficher les livres qui n'ont pas encore été retournés (ReturnDate est NULL).
+SELECT Authors.FirstName, Authors.LastName, Books.Title, Borrowings.BorrowDate FROM Books
+JOIN Borrowings On Books.BookID == Borrowings.BookID
+JOIN Authors on Authors.AuthorID == Books.AuthorID
+WHERE Borrowings.ReturnDate IS NULL;
+
+-- Trouver le nombre total de livres disponibles pour chaque genre
+SELECT Genres.GenreName, SUM(Books.AvailableCopies) AS TotalAvailable 
+FROM Books
+JOIN Genres On BookGenres.GenreID = Genres.GenreID 
+JOIN BookGenres ON BookGenres.BookID = Books.BookID 
+GROUP BY Genres.GenreName ;
+
+-- Afficher les auteurs avec le nombre de livres qu'ils ont écrits.
+SELECT Authors.FirstName, Authors.LastName, COUNT(Books.BookID) AS NumberOfBooks 
+FROM Authors
+LEFT JOIN Books On Books.AuthorID = Authors.AuthorID
+GROUP bY Authors.AuthorID;
+
+-- Lister tous les membres qui ont emprunté plus de 1 livres.
+SELECT Members.FirstName, Members.LastName, COUNT(Borrowings.BorrowingID) As NumberOfBorrowings
+FROM Members 
+JOIN Borrowings ON Members.MemberID = Borrowings.MemberID 
+GROUP By Members.MemberID
+HAVING COUNT(Borrowings.BorrowingID) > 1;
+
+-- Trouver le nombre moyen de livres empruntés par chaque membre.
+SELECT AVG(BookCount) AS AverageBooksBorrowed
+FROM (
+    SELECT COUNT(Borrowings.BorrowingID) AS BookCount
+    FROM Borrowings
+  	JOIN Members ON Members.MemberID = Borrowings.MemberID
+    GROUP BY Borrowings.MemberID
+) AS Subquery;
+
+-- Lister les membres qui ont rejoint la bibliothèque après le 1er janvier 2021.
+SELECT * FROM Members WHERE Members.JoinDate >= '2021-01-15';
+
+-- Trouver les 5 livres les plus empruntés de la bibliothèque.
+SELECT Books.Title, COUNT(Borrowings.BorrowingID) As BorrowCount
+FROM Books
+JOIN Borrowings ON Books.BookID = Borrowings.BookID
+GROUP By Books.BookID
+ORDER by BorrowCount DESC 
+LIMIT 5;
+
+-- Lister tous les genres et le nombre de livres associés à chaque genre.
+SELECT Genres.GenreName, COUNT(BookGenres.BookID) AS NumberOfBookByGenres
+FROM Genres
+JOIN BookGenres On BookGenres.GenreID = Genres.GenreID
+GROUP BY Genres.GenreID;
+
+-- Afficher les membres qui n'ont emprunté aucun livre. 
+SELECT Members.MemberID, Members.FirstName, Members.LastName 
+FROM Members
+LEFT JOIN Borrowings ON Members.MemberID = Borrowings.MemberID
+WHERE Borrowings.BorrowingID IS NULL;
+
+-- Trouver les livres publiés avant l'année 1950.
+SELECT * FROM Books WHERE Books.PublicationYear < 1950;
+
+-- Liste tous les livres avec leur date d'emprunt et la date de retour prévue, triés par date d'emprunt.
+SELECT *
+FROM Books
+JOIN Borrowings ON Books.BookID = Borrowings.BookID
+ORDER BY Borrowings.BorrowDate ASC;
+
+-- Trouver les membres qui ont emprunté des livres dans plus de 2 genres différents. 
+SELECT Members.FirstName, Members.LastName, COUNT(DISTINCT Genres.GenreID) AS GenreCount 
+FROM Borrowings
+JOIN Members ON Borrowings.MemberID = Members.MemberID 
+JOIN Genres On Genres.GenreID = BookGenres.GenreID
+JOIN Books ON Borrowings.BookID = Books.BookID
+JOIN BookGenres ON BookGenres.BookID = Books.BookID
+GROUP By Members.MemberID
+HAVING COUNT(DISTINCT Genres.GenreID) > 2;
+
+-- Afficher les livres écrits par des auteurs nés avant 1900. 
+SELECT Books.Title, Authors.FirstName, Authors.LastName, Authors.BirthDate 
+FROM Books
+JOIN Authors On Books.AuthorID = Authors.AuthorID
+WHERE Authors.BirthDate < '1900-01-01';
+
+-- Lister tous les emprunts effectués au cours des 6 derniers mois. 
+SELECT Members.FirstName, Members.LastName, Borrowings.BorrowingID, Borrowings.BookID, Books.Title, Borrowings.BorrowDate
+FROM Borrowings
+JOIN Books On Books.BookID = Borrowings.BookID
+JOIN Members On Members.MemberID = Borrowings.MemberID
+WHERE Borrowings.BorrowDate >= '2023-03-03';
+
+/* Une autre méthode avec Interval de 6 MOIS  
+SELECT Members.FirstName, Members.LastName, Books.Title, Borrowings.BorrowDate
+FROM Borrowings
+JOIN Members ON Borrowings.MemberID = Members.MemberID
+JOIN Books ON Borrowings.BookID = Books.BookID
+WHERE Borrowings.BorrowDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH); 
+*/
+
+-- Trouver les membres qui ont emprunté le même livre plus d'une fois. 
+SELECT Members.FirstName, Members.LastName, Books.Title, COUNT(Borrowings.BorrowingID) AS TimesBorrowing
+FROM Members
+JOIN Books ON Books.BookID = Borrowings.BookID
+JOIN Borrowings ON Borrowings.MemberID = Members.MemberID
+GROUP By Members.MemberID, Books.BookID
+HAVING COUNT(Borrowings.BorrowingID);
+
+-- Lister les livres qui ont été empruntés mais ne sont pas encore retournés, en indiquant le nombre de jours depuis la date d'emprunt.
+SELECT Members.FirstName, Members.LastName, Authors.FirstName, Authors.LastName, Books.Title, Borrowings.BorrowDate, DATEDIFF(CURRENT_DATE, Borrowings.BorrowDate) AS NumbersOfDayBorrow
+FROM Borrowings
+JOIN Books On Books.BookID = Borrowings.BookID
+JOIN Authors on Authors.AuthorID = Books.AuthorID
+JOIN Members On Members.MemberID = Borrowings.MemberID
+WHERE Borrowings.ReturnDate IS NULL;
+
+-- Afficher les membres avec le nombre de livres empruntés et triés par ordre décroissant du nombre d'emprunts.
+SELECT Members.FirstName, Members.LastName, COUNT(Borrowings.BorrowingID) As NumberBorrows
+FROM Members
+JOIN Borrowings ON Borrowings.MemberID = Members.MemberID
+GROUP By Members.MemberID
+ORDER By NumberBorrows DESC;
+
+-- Trouver les livres avec le plus grand nombre de copies disponibles.
+SELECT Books.Title, Books.AuthorID, Books.AvailableCopies 
+FROM Books
+ORDER BY Books.AvailableCopies DESC
+LIMIT 1;
+
+-- Lister les auteurs et le nombre total de livres qu'ils ont en circulation (livres empruntés).
+SELECT Authors.FirstName, Authors.LastName, COUNT(Borrowings.BorrowingID) As BorrowsBooks
+FROM Authors
+JOIN Borrowings ON Borrowings.BookID = Books.BookID
+JOIN Books ON Books.AuthorID = Authors.AuthorID 
+GROUP BY Authors.AuthorID
+ORDER By Borrowings.BorrowDate;
+
+-- Trouver tous les membres qui ont emprunté des livres du genre 'Fantasy'.
+SELECT Borrowings.BorrowingID, Members.FirstName, Members.LastName, Genres.GenreName
+FROM Members
+JOIN Borrowings ON Borrowings.MemberID = Members.MemberID
+JOIN BookGenres ON Genres.GenreID = BookGenres.GenreID
+JOIN Genres ON Genres.GenreID = BookGenres.GenreID
+JOIN Books ON Books.BookID = BookGenres.BookID
+WHERE Genres.GenreName = 'Fantasy';
+
+-- Afficher la liste des auteurs qui ont écrit des livres dans plusieurs genres.
+SELECT Authors.FirstName, Authors.LastName, COUNT(DISTINCT Genres.GenreID) AS NumberOfGenres
+FROM Authors
+JOIN Books ON Authors.AuthorID = Books.AuthorID
+JOIN BookGenres ON Books.BookID = BookGenres.BookID
+JOIN Genres ON BookGenres.GenreID = Genres.GenreID
+GROUP BY Authors.AuthorID
+HAVING COUNT(DISTINCT Genres.GenreID) > 1;
+
+
+-- Lister les livres dont les copies disponibles sont inférieures à 3.
+SELECT Books.Title, Books.AvailableCopies 
+FROM Books
+WHERE Books.AvailableCopies < 3;
+
+-- Trouver tous les livres d'un genre spécifique, par exemple 'Fantasy', qui ont été empruntés au moins une fois.
+SELECT DISTINCT Books.Title, Books.PublicationYear, Genres.GenreName
+FROM Books
+JOIN Borrowings ON Borrowings.BookID = Books.BookID
+JOIN Genres ON Genres.GenreID = BookGenres.GenreID
+JOIN BookGenres On BookGenres.BookID = Books.BookID
+WHERE Genres.GenreName = 'Fantasy';
+
+-- Lister tous les livres empruntés par plus de 10 membres différents.
+SELECT Books.Title, COUNT(DISTINCT Borrowings.MemberID) AS NumberOfUniqueBorrowers
+FROM Books
+JOIN Borrowings ON Books.BookID = Borrowings.BookID
+GROUP BY Books.BookID
+HAVING COUNT(DISTINCT Borrowings.MemberID) > 10;
+
+-- Trouver les auteurs qui n'ont jamais été empruntés (aucun de leurs livres n'a été emprunté).
+SELECT Authors.FirstName, Authors.LastName, Borrowings.BookID
+FROM Authors
+JOIN Books ON Authors.AuthorID = Books.AuthorID
+LEFT JOIN Borrowings ON Borrowings.BookID = Books.BookID
+WHERE Borrowings.BorrowingID IS NULL; 
+
+-- Afficher les livres qui ont été empruntés mais dont la date de retour dépasse 30 jours après la date d'emprunt.
+SELECT Books.Title, Members.FirstName, Members.LastName, Borrowings.BorrowDate, Borrowings.ReturnDate
+FROM Borrowings
+JOIN Books ON Borrowings.BookID = Books.BookID
+JOIN Members ON Borrowings.MemberID = Members.MemberID
+WHERE DATEDIFF(Borrowings.ReturnDate, Borrowings.BorrowDate) > 30;
+
+-- Lister tous les membres avec leur dernière date d'emprunt.
+SELECT Members.FirstName, Members.LastName, MAX(Borrowings.BorrowDate) AS LastBorrowDate
+FROM Members
+JOIN Borrowings ON Members.MemberID = Borrowings.MemberID
+GROUP By Members.MemberID;
+
+-- Trouver les livres qui n'ont pas été empruntés depuis plus d'un an.
+SELECT Books.Title
+FROM Books
+LEFT JOIN Borrowings ON Books.BookID = Borrowings.BookID
+GROUP BY Books.BookID
+HAVING MAX(Borrowings.BorrowDate) < DATE_SUB(CURDATE(), INTERVAL 1 YEAR) OR MAX(Borrowings.BorrowDate) IS NULL;
+
+-- Pour generer l'ensemble des élèments inclut dans les differentes tables, on applique la jointure sur les clés étrangeres
+SELECT DISTINCT * 
+FROM Authors
+JOIN Books ON Books.AuthorID = Authors.AuthorID
+JOIN Members ON Members.MemberID = Borrowings.MemberID
+Join BookGenres On BookGenres.BookID = Books.BookID
+JOIN Borrowings On Borrowings.BookID = BookGenres.BookID
+JOIN Genres ON Genres.GenreID = BookGenres.BookID
+
+-- Pour generer l'ensemble des élèments inclut dans les differentes tables, on applique la 
+-- jointure sur les clés étrangeres, en especifiant volontairement les tables pour éviter les doublons 
+SELECT DISTINCT
+    Authors.AuthorID,
+    Authors.FirstName,
+    Authors.LastName,
+    Authors.BirthDate,
+    Books.BookID,
+    Books.Title,
+    Books.PublicationYear,
+    Books.AvailableCopies,
+    Members.MemberID,
+    Members.FirstName AS MemberFirstName,
+    Members.LastName AS MemberLastName,
+    Members.JoinDate,
+    Members.Email,
+    Borrowings.BorrowingID,
+    Borrowings.BorrowDate,
+    Borrowings.ReturnDate,
+    Genres.GenreID,
+    Genres.GenreName
+FROM Authors
+JOIN Books ON Books.AuthorID = Authors.AuthorID
+JOIN Borrowings ON Borrowings.BookID = Books.BookID
+JOIN Members ON Members.MemberID = Borrowings.MemberID
+JOIN BookGenres ON BookGenres.BookID = Books.BookID
+JOIN Genres ON Genres.GenreID = BookGenres.GenreID;
